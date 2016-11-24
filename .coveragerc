@@ -1,0 +1,6 @@
+[run]
+branch = True
+source = github_webhook_handler
+
+[report]
+ignore_errors = True
