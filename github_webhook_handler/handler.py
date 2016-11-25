@@ -125,6 +125,9 @@ def run_actions(config, request, handler):
     working_dir = tempfile.mkdtemp()
 
     try:
+        with open(os.path.join(working_dir, 'event.json'), 'w') as f:
+            f.write(request.text)
+
         if handler.get('clone', True):
             working_git_dir = os.path.join(working_dir, 'repo')
 
