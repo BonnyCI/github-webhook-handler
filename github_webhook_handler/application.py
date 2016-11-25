@@ -46,15 +46,15 @@ def initialize_application(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config',
                         dest='config',
-		        default=os.environ.get('GWH_CONFIG_FILE'),
+                        default=os.environ.get('GWH_CONFIG_FILE'),
                         help='Config file to load')
 
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
 
     config = {}
 
-    if args.config: 
-        with open(args.config, 'r') as f: 
-	    config = yaml.safe_load(f) or {}
+    if args.config:
+        with open(args.config, 'r') as f:
+            config = yaml.safe_load(f) or {}
 
     return webob.dec.wsgify(application, args=(config,))

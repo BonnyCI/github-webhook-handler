@@ -11,6 +11,7 @@
 # under the License.
 
 import testtools
+import webob.dec
 import webtest
 
 from github_webhook_handler import application
@@ -19,5 +20,7 @@ from github_webhook_handler import application
 class TestCase(testtools.TestCase):
     """Test case base class for all unit tests."""
 
-    def create_app(self):
-        return webtest.TestApp(application.initialize_application())
+    def create_app(self, config=None):
+        config = config or {}
+        app = webob.dec.wsgify(application.application, args=(config,))
+        return webtest.TestApp(app)

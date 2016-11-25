@@ -14,7 +14,6 @@ import hashlib
 import hmac
 import os
 import os.path
-import re
 import shlex
 import shutil
 import subprocess
@@ -25,13 +24,11 @@ import webob
 import webob.exc
 import yaml
 
-from github_webhook_handler import github
-
 
 def handle(config, request):
     event_type = request.headers.get('X-Github-Event')
 
-    if event_type == 'ping': 
+    if event_type == 'ping':
         return handle_ping(config, request)
 
     if event_type == 'push':
@@ -48,52 +45,52 @@ def handle_ping(config, request):
 
     for handler in get_handlers(config):
         if handler.get('repo') == full_name:
-            validate_signature(config, request, handler)     
+            validate_signature(config, request, handler)
 
-    return webob.Response(status=200, 
+    return webob.Response(status=200,
                           content_type='text/plain',
                           text=u'pong')
-                 
 
-def handle_push(config, request): 
+
+def handle_push(config, request):
     full_name = request.json['repository']['full_name']
 
     for handler in get_handlers(config):
         if handler.get('repo') == full_name:
-            # TODO: Only run on some branches
-            #branch = repo.get('branch', '^master$')
-            validate_signature(config, request, handler)     
+            # TODO(jamielennox): Only run on some branches
+            # branch = repo.get('branch', '^master$')
+            validate_signature(config, request, handler)
             run_actions(config, request, handler)
 
     return webob.Response(status=200)
 
 
-def get_handlers(config): 
-    handlers_file = config.get('handlers') 
+def get_handlers(config):
+    handlers_file = config.get('handlers')
 
-    if not handlers_file: 
+    if not handlers_file:
         raise webob.exc.HTTPOk(comment='No handlers file available. Exiting.')
 
     with open(handlers_file, 'r') as f:
         return yaml.safe_load(f)
 
 
-def validate_signature(config, request, handler): 
+def validate_signature(config, request, handler):
     signature = request.headers.get('X-Hub-Signature')
     key = handler.get('key')
-    
+
     if key and not signature:
-        raise webob.exc.HTTPForbidden() 
-    
+        raise webob.exc.HTTPForbidden()
+
     elif signature and not key:
         raise webob.exc.HTTPForbidden()
-    
+
     elif key:
         digest, value = signature.split('=')
-        
+
         if digest != 'sha1':
             raise webob.exc.HTTPForbidden()
-    
+
         mac = hmac.new(key, msg=request.body, digestmod=hashlib.sha1)
 
         if not hmac.compare_digest(mac.hexdigest(), value):
@@ -154,7 +151,7 @@ def create_temp_repo(working_dir, git_dir, url, commit, refspec=None):
     """Checkout a local working copy of a repository.
 
     Clone the URL in the github webhook into a cache directory, ensure that the
-    latest commits are present and then clone that into a temporary directory 
+    latest commits are present and then clone that into a temporary directory
     that a script can modify.
     """
     cache_git_repo = git.Repo.init(git_dir, bare=True, mkdir=True)
