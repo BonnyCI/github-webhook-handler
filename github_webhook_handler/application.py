@@ -22,6 +22,8 @@ import yaml
 
 from github_webhook_handler import handler
 
+GITHUB_META_URL = 'https://api.github.com/meta'
+
 
 def application(request, config):
     if request.path != '/':
@@ -31,7 +33,7 @@ def application(request, config):
         raise webob.exc.HTTPMethodNotAllowed()
 
     request_ip = ipaddress.ip_address(request.client_addr.decode('utf-8'))
-    hook_blocks = requests.get('https://api.github.com/meta').json()['hooks']
+    hook_blocks = requests.get(GITHUB_META_URL).json()['hooks']
 
     for block in hook_blocks:
         if request_ip in ipaddress.ip_network(block):

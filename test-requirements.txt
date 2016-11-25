@@ -10,4 +10,7 @@ testtools>=1.4.0 # MIT
 # releasenotes
 reno>=1.8.0 # Apache2
 
+fixtures
+mock
+requests-mock>=1.0
 WebTest>=2.0  # MIT
