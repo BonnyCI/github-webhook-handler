@@ -13,7 +13,18 @@
 from github_webhook_handler.tests import base
 
 
-class TestGithub_webhook_handler(base.TestCase):
+class TestGithubWebhookHandler(base.TestCase):
 
-    def test_something(self):
-        pass
+    def test_non_root_gives_404(self):
+        app = self.create_app()
+
+        app.post('/abc', status=404)
+        app.post('/def', status=404)
+        app.post('/ghi/jkl', status=404)
+
+    def test_not_post_gives_405(self):
+        app = self.create_app()
+
+        app.get('/', status=405)
+        app.put('/', status=405)
+        app.head('/', status=405)

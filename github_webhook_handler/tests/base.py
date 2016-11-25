@@ -11,7 +11,13 @@
 # under the License.
 
 import testtools
+import webtest
+
+from github_webhook_handler import application
 
 
 class TestCase(testtools.TestCase):
     """Test case base class for all unit tests."""
+
+    def create_app(self):
+        return webtest.TestApp(application.initialize_application())
