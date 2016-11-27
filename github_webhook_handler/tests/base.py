@@ -47,7 +47,11 @@ class TestCase(testtools.TestCase):
         else:
             app = _flip_handler_args
 
-        return webtest.TestApp(webob.dec.wsgify(app, args=(config,)))
+        wsgi = webob.dec.wsgify(app,
+                                args=(config,),
+                                RequestClass=application.Request)
+
+        return webtest.TestApp(wsgi)
 
     def post(self, data, **kwargs):
         app = self.create_app(

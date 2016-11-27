@@ -16,7 +16,7 @@ import uuid
 from github_webhook_handler import application
 from github_webhook_handler.tests import base
 
-get_handler = 'github_webhook_handler.handler.get_handlers'
+handler_func = 'github_webhook_handler.handler._handlers_from_file'
 
 
 class TestGithubWebhookHandler(base.TestCase):
@@ -25,10 +25,11 @@ class TestGithubWebhookHandler(base.TestCase):
         super(TestGithubWebhookHandler, self).setUp()
 
         self.handlers = []
-        self.useFixture(fixtures.MockPatch(get_handler, new=self.get_handlers))
+        self.useFixture(fixtures.MockPatch(handler_func,
+                                           new=self.handler_func))
         self.fake_popen = self.useFixture(fixtures.FakePopen())
 
-    def get_handlers(self, config):
+    def handler_func(self, config):
         return self.handlers
 
     def test_non_root_gives_404(self):
@@ -79,19 +80,15 @@ class TestGithubWebhookHandler(base.TestCase):
 
         app.post('/', extra_environ={'REMOTE_ADDR': '10.0.0.1'}, status=403)
         app.post('/', extra_environ={'REMOTE_ADDR': '192.168.0.5'}, status=403)
-        app.post('/', extra_environ={'REMOTE_ADDR': '192.30.252.88'})
 
-    def test_unhandled_event_type(self):
-        app = self.create_app()
-        event_type = uuid.uuid4().hex
-        headers = {'X-Github-Event': event_type}
-
-        text = app.post('/', headers=headers).text
-        self.assertEqual('Unhandled event type: %s' % event_type, text)
+        app.post_json('/',
+                      {'repository': {'full_name': 'app/test'}},
+                      extra_environ={'REMOTE_ADDR': '192.30.252.88'})
 
     def test_ping_no_signature(self):
         self.handlers = [
-            {'repo': self.REPO_NAME}
+            {'repo': self.REPO_NAME,
+             'type': 'ping'}
         ]
 
         self.ping()
@@ -99,7 +96,8 @@ class TestGithubWebhookHandler(base.TestCase):
     def test_ping_bad_signature(self):
         self.handlers = [
             {'repo': self.REPO_NAME,
-             'key': uuid.uuid4().hex}
+             'key': uuid.uuid4().hex,
+             'type': 'ping'}
         ]
 
         self.ping(signature=uuid.uuid4().hex, status=403)
@@ -125,8 +123,7 @@ class TestGithubWebhookHandler(base.TestCase):
 
         self.handlers = [
             {'repo': self.REPO_NAME,
-             'actions': ['./run.sh job'],
-             'clone': False}
+             'action': './run.sh job'}
         ]
 
         self.push(before=before, after=after)
@@ -138,6 +135,35 @@ class TestGithubWebhookHandler(base.TestCase):
 
         self.assertEqual(['./run.sh', 'job'], args)
 
-        self.assertEqual(before, env['GWH_BEFORE'])
-        self.assertEqual(after, env['GWH_AFTER'])
-        self.assertEqual(self.REF, env['GWH_REF'])
+        self.assertEqual('push', env['GWH_EVENT_TYPE'])
+        self.assertEqual('event.json', env['GWH_EVENT_FILE'][-10:])
+
+    def test_filter_stuff(self):
+        self.handlers = [
+            {'repo': self.REPO_NAME,
+             'action': './run.sh job',
+             'filter': {'ref': self.REF,
+                        'a.b.c': 'd'}}
+        ]
+
+        data = {'a': {'b': {'c': 'd'}}}
+
+        self.push(data)
+
+        self.assertEqual(1, len(self.fake_popen.procs))
+        args = self.fake_popen.procs[0]._args['args']
+        self.assertEqual(['./run.sh', 'job'], args)
+
+    def test_filter_mismatch(self):
+        self.handlers = [
+            {'repo': self.REPO_NAME,
+             'action': './run.sh job',
+             'filter': {'ref': self.REF,
+                        'a.b.c': 'e'}}
+        ]
+
+        data = {'a': {'b': {'c': 'd'}}}
+
+        self.push(data)
+
+        self.assertEqual(0, len(self.fake_popen.procs))

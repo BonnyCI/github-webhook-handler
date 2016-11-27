@@ -16,6 +16,7 @@ import sys
 
 import ipaddress
 import requests
+import webob
 import webob.dec
 import webob.exc
 import yaml
@@ -23,6 +24,27 @@ import yaml
 from github_webhook_handler import handler
 
 GITHUB_META_URL = 'https://api.github.com/meta'
+
+
+class Request(webob.Request):
+
+    _event_data = None
+
+    @property
+    def event_type(self):
+        return self.headers.get('X-Github-Event')
+
+    @property
+    def event_data(self):
+        """Cache the JSON body so as not to interpret it multiple times."""
+        if self._event_data is None:
+            self._event_data = self.json_body
+
+        return self._event_data
+
+    @property
+    def signature(self):
+        return self.headers.get('X-Hub-Signature')
 
 
 def application(request, config):
@@ -59,4 +81,4 @@ def initialize_application(argv=None):
         with open(args.config, 'r') as f:
             config = yaml.safe_load(f) or {}
 
-    return webob.dec.wsgify(application, args=(config,))
+    return webob.dec.wsgify(application, args=(config,), RequestClass=Request)
