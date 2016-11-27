@@ -94,8 +94,9 @@ def run_action(config, request, handler):
     env = os.environ.copy()
     env['GWH_EVENT_TYPE'] = request.event_type
 
-    cache_dir = config.get('cache_dir', os.path.expanduser('~/gwh-cache'))
-    env['GWH_CACHE_DIR'] = cache_dir
+    cache_dir = config.get('cache_dir')
+    if cache_dir:
+        env['GWH_CACHE_DIR'] = cache_dir
 
     # working dir is a temporary directory the scripts are executed from
     with utils.mkdtemp() as working_dir:
